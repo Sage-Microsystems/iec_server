@@ -10,6 +10,9 @@ LOG = structlog.get_logger()
 
 from config import config
 from twilio import send_code, verify_code
+from model import Voter
+
+registered_voters = []
 
 app = Flask(__name__)
 config_name = os.getenv("APP_ENVIRONMENT") or "default"
@@ -51,6 +54,37 @@ def check_verification():
         return jsonify(result=response.json())
     except Exception as e:
         msg = "verfication failed"
+        return jsonify(result=error_response(msg, e))
+
+@app.route("/voters", methods=['POST'])
+def register_voter():
+    try:
+        payload = request.json
+        voter = Voter(
+            fullname=payload.get("fullname", ""),
+            gender=payload.get("gender", ""),
+            dob=payload.get("dob",""),
+            national_id=payload.get("nationalId",""),
+            reg_center=payload.get("regCenter",""),
+            consitituency=payload.get("constituency",""),
+            district=payload.get("district")
+        )
+        global registered_voters 
+        registered_voters.append(voter)
+
+        return jsonify(result=voter.to_json())
+    except Exception as e:
+        msg = "registration was unsuccessful"
+        return jsonify(result=error_response(msg, e))
+
+@app.route("/voters", methods=['GET'])
+def get_voters():
+    try:
+        global registered_voters
+        voters = [v.to_json() for v in registered_voters]
+        return jsonify(result=voters)
+    except Exception as e:
+        msg = "failed fetching voters"
         return jsonify(result=error_response(msg, e))
 
 def make_shell_context():
